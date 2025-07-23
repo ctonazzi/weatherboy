@@ -7,6 +7,7 @@ import aiohttp
 from dotenv import load_dotenv
 from discord.ext import commands
 
+# init program
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
@@ -29,10 +30,12 @@ messages = {
     "Tornado Warning": "🟥🌪️🟥 TORNADO WARNING for {} 🟥🌪️🟥\n{}",
     "Tornado Watch": "🟨🌪️🟨 TORNADO WATCH for {} 🟨🌪️🟨\n{}",
     "Extreme Heat Warning": "🟨🔥🟨 EXTREME HEAT WARNING for {} 🟨🔥🟨\n{}",
-    "Extreme Wind Warning": "🟨💨🟨 EXTREME WIND WARNING for {} 🟨💨🟨\n{}",
+    "Extreme Wind Warning": "🟪💨🟪 EXTREME WIND WARNING for {} 🟪💨🟪\n{}\nSUSTAINED WINDS OF 110+ MPH ARE EXPECTED. SEEK SHELTER IMMEDIATELY.",
+    "Extreme Cold Warning": "🟨🥶🟨 EXTREME COLD WARNING for {} 🟨🥶🟨\n {}",
     "Severe Thunderstorm Warning": "🟥⛈️🟥 SEVERE THUNDERSTORM WARNING for {} 🟥⛈️🟥\n{}",
-    "Severe Thunderstorm Watch": "🟨⛈️🟨 SEVERE THUNDERSTORM WATCH for {} {} 🟨⛈️🟨\n{}"
-
+    "Severe Thunderstorm Watch": "🟨⛈️🟨 SEVERE THUNDERSTORM WATCH for {} {} 🟨⛈️🟨\n{}",
+    "Winter Storm Warning": "🟥🌨️🟥 WINTER STORM WARNING for {} 🟥🌨️🟥\n{}",
+    "Winter Storm Watch": "🟨🌨️🟨 WINTER STORM WATCH for {} 🟨🌨️🟨\n{}"
 }
 
 # Discord API vars
@@ -48,21 +51,29 @@ async def on_ready():
 
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
-        await channel.send('Weatherboy is awake')
+        await channel.send('Weatherboy is awake\nUse \'!info\' to learn more.')
         await poll_locations()
     else:
         print('!!! WEATHERBOY DID NOT FIND THE CHANNEL !!!')
 
+# COMMANDS
+
 @bot.command() # make sure bot is alive
 async def ping(ctx):
     await ctx.send("pong")
+
+@bot.command()
+async def info(ctx):
+    with open('info.txt', 'r') as file:
+        info = file.read()
+    await ctx.send(info)
 
 async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     try:
         api = f'https://api.weather.gov/alerts/active?point={point}'
         headers = {
             "Accept": "application/ld+json",
-            "User-Agent": "test_bot, ctonazzi@gmail.com"
+            "User-Agent": "weatherboy_test_bot_automated_alerts, ctonazzi@gmail.com"
         }
 
         if name in last_modified:
