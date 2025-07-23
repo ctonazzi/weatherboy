@@ -69,6 +69,10 @@ async def info(ctx):
         info = file.read()
     await ctx.send(info)
 
+@bot.command()
+async def forcequit(ctx):
+    quit()
+
 async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     try:
         api = f'https://api.weather.gov/alerts/active?point={point}'
