@@ -6,6 +6,7 @@ import asyncio
 import aiohttp
 from dotenv import load_dotenv
 from discord.ext import commands
+from datetime import datetime
 
 # init program
 load_dotenv()
@@ -93,14 +94,17 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     headline = i.get("headline")
                     description = i.get("description")
                     await sendAlert(event, name, headline, description)
-                    print("ALERT SENT!")
+                    print(f"ALERT SENT! {getTime()}")
 
             elif response.status == 304: # GOOD response, but NO UPDATE.
-                print('No updates')
+                print(f'No updates {getTime()}')
             elif response.status == 301: # API ERROR
                 post_data = response.json()
 
                 print(f'{post_data.get("title")}\n{post_data.get("status")}\n{post_data.get("detail")}')
+            elif response.status == 429: # RATE LIMITED
+                print(f'rate limited: error code {response.status} {getTime()}')
+                exit() # STOP execution if we get rate limited. This is REALLY bad.
             else:
                 print(f'API Error: {response.status}')
 
@@ -140,6 +144,10 @@ async def poll_locations():
                 await fetchAlerts(session, name, point)
                 await asyncio.sleep(6)
             await asyncio.sleep(60)
+
+# get current time
+def getTime():
+    return datetime.now().strftime("%H:%M:%S")
 
 # keep at end
 bot.run(TOKEN)
