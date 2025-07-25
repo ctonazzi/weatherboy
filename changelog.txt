@@ -1,4 +1,4 @@
-7/22/2025 v1.0.0 -- initial release
-- Basic functionality is here. Weather alerts are sent to channels and updated frequently!
-- Basic list of commands added
-- backend for future complex commands is in place.
+7/24/2025 v1.1.0
+- Added alert caching to hopefully prevent older alerts being sent when new ones are issued alongside them.
+- Added changelog
+- backend improvements to make the boy a little smoother

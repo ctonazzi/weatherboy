@@ -1,12 +1,10 @@
-import requests
-import json
 import os
 import discord
 import asyncio
 import aiohttp
 from dotenv import load_dotenv
 from discord.ext import commands
-from datetime import datetime
+from datetime import datetime, timezone
 
 # init program
 load_dotenv()
@@ -23,6 +21,9 @@ locations = {
 
 # THIS is an empty table to hold the last modified information for any given location.
 last_modified = {}
+
+# Alert cache
+cache = {}
 
 # Warning messages
 messages = {
@@ -50,6 +51,8 @@ bot = commands.Bot(intents=intents, command_prefix='!')
 async def on_ready():
     print(f'{bot.user} successfully connected.')
 
+    asyncio.create_task(msg_loop())
+
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         await channel.send('Weatherboy is awake\nUse \'!info\' to learn more.')
@@ -63,15 +66,21 @@ async def on_ready():
 async def ping(ctx):
     await ctx.send("pong")
 
-@bot.command()
+@bot.command() # view bot info
 async def info(ctx):
     with open('info.txt', 'r') as file:
         info = file.read()
     await ctx.send(info)
 
-@bot.command()
+@bot.command() # emergency quit remotely
 async def forcequit(ctx):
     quit()
+
+@bot.command() # view changelog
+async def changelog(ctx):
+    with open('changelog.txt', 'r') as file:
+        info = file.read()
+    await ctx.send(info)
 
 async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     try:
@@ -94,11 +103,16 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     print('No alerts')
                 
                 for i in graph:
+                    id = i.get("id")
                     event = i.get("event")
                     headline = i.get("headline")
                     description = i.get("description")
-                    await sendAlert(event, name, headline, description)
-                    print(f"ALERT SENT! {getTime()}")
+                    expires = i.get("expires")
+                    if id not in cache:
+                        await sendAlert(event, name, headline, description)
+                        cache[f"{id}"] = f"{expires}"
+                        print(f"ALERT SENT! {getTime()}")
+                        
 
             elif response.status == 304: # GOOD response, but NO UPDATE.
                 print(f'No updates {getTime()}')
@@ -115,7 +129,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     except aiohttp.ClientError as e:
         print(f'Error requesting data: {e}')
 
-async def sendAlert(type, name, headline, description): # Expiration date is deprecated. I'm not planning on using it, remove at some point.
+async def sendAlert(type, name, headline, description):
     print(type)
     try:
         if type == "Tornado Warning":
@@ -147,7 +161,31 @@ async def poll_locations():
             for name, point in locations.items():
                 await fetchAlerts(session, name, point)
                 await asyncio.sleep(6)
+            await clear_cache()
             await asyncio.sleep(60)
+
+# clean cache
+async def clear_cache():
+    currentTime = datetime.now(timezone.utc)
+    for alert, expires in cache.items():
+        expireTime = datetime.fromisoformat(expires)
+        if currentTime > expireTime:
+            del cache[alert]
+            print(f'Removed alert ID {alert} from the cache.')
+
+async def msg_loop():
+    await bot.wait_until_ready()
+    channel = bot.get_channel(CHANNEL_ID)
+
+    while True:
+        msg = await asyncio.to_thread(input)
+
+        if channel:
+            await channel.send(msg)
+        else:
+            print("No channel")
+
+# non-asyncronous functions
 
 # get current time
 def getTime():
