@@ -167,11 +167,17 @@ async def poll_locations():
 # clean cache
 async def clear_cache():
     currentTime = datetime.now(timezone.utc)
+    todelete = {}
     for alert, expires in cache.items():
         expireTime = datetime.fromisoformat(expires)
         if currentTime > expireTime:
-            del cache[alert]
-            print(f'Removed alert ID {alert} from the cache.')
+            todelete[f'{alert}'] = f'{expires}'
+            print(f'Marked alert ID {alert} for deletion.')
+    for alert in todelete:
+        if alert in cache:
+            deleted = cache.pop(alert, None)
+            print(f'Deleted id: {deleted}') # Debugging line, just to make sure things are being popped properly. Might help if this function explodes again.
+            print(f'Alert ID {alert} removed from cache.')
 
 async def msg_loop():
     await bot.wait_until_ready()
