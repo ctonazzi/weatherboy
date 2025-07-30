@@ -108,8 +108,9 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     headline = i.get("headline")
                     description = i.get("description")
                     expires = i.get("expires")
+                    messageType = i.get("messageType")
                     if id not in cache:
-                        await sendAlert(event, name, headline, description)
+                        await sendAlert(event, name, headline, description, messageType)
                         cache[f"{id}"] = f"{expires}"
                         print(f"ALERT SENT! {getTime()}")
                         
@@ -129,7 +130,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     except aiohttp.ClientError as e:
         print(f'Error requesting data: {e}')
 
-async def sendAlert(type, name, headline, description):
+async def sendAlert(type, name, headline, description, messageType):
     print(type)
     try:
         if type == "Tornado Warning":
