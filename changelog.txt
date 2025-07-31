@@ -1,3 +1,4 @@
-7/24/2025 v1.2.0
+7/30/2025 v1.2.0
 - Added new tag to all alerts that displays whether it is a new alert or an update to an older alert. This should clear up some confusion about repeat extreme heat warnings.
 - Added flood watch, flash flood warning, and flood warning to message repo.
+- bugfix: found and repaired an issue with empty messages crashing bot.

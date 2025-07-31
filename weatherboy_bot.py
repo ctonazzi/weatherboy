@@ -191,7 +191,10 @@ async def msg_loop():
         msg = await asyncio.to_thread(input)
 
         if channel:
-            await channel.send(msg)
+            try:
+                await channel.send(msg)
+            except Exception as e:
+                print(f"msg_loop Exception: {e}")
         else:
             print("No channel")
 
