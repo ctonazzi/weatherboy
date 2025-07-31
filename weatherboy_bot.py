@@ -40,7 +40,9 @@ messages = {
     "Winter Storm Watch": "🟨🌨️🟨 WINTER STORM WATCH for {} 🟨🌨️🟨\n{} ({})",
     "Flash Flood Warning": "🟥🌊🟥 FLASH FLOOD WARNING for {} 🟥🌊🟥\n{} ({})",
     "Flood Warning": "🟥🌊🟥 FLOOD WARNING for {} 🟥🌊🟥\n{} ({})",
-    "Flood Watch": "🟨🌊🟨 FLOOD WATCH for {} 🟨🌊🟨\n{} ({})"
+    "Flood Watch": "🟨🌊🟨 FLOOD WATCH for {} 🟨🌊🟨\n{} ({})",
+    "Air Quality Alert": "🟨🌁🟨 AIR QUALITY ALERT for {} 🟨🌁🟨\n{} ({})",
+    "Dense Fog Advisory": "🟨🌫️🟨 DENSE FOG ADVISORY for {} 🟨🌫️🟨\n{} ({})"
 }
 
 # Discord API vars
@@ -165,7 +167,8 @@ async def poll_locations():
             for name, point in locations.items():
                 await fetchAlerts(session, name, point)
                 await asyncio.sleep(6)
-            await clear_cache()
+            await clear_cache() # clean it
+            await update_activity() # update it
             await asyncio.sleep(60)
 
 # clean cache
@@ -197,6 +200,14 @@ async def msg_loop():
                 print(f"msg_loop Exception: {e}")
         else:
             print("No channel")
+
+async def update_activity():
+    alertCount = len(cache)
+    if alertCount == 1:
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{alertCount} active alert"))
+    else:
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{alertCount} active alerts"))
+    print("activity updated") # debugging line-- remove in production version
 
 # non-asyncronous functions
 
