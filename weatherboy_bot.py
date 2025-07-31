@@ -101,8 +101,8 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
         async with session.get(api, headers=headers) as response:
             if response.status == 200: # GOOD response
                 last_modified[name] = response.headers.get("Last-Modified")
-                post_data = await response.json() # This actually converts data into a JSON
-                graph = post_data.get("@graph", []) # convert the alerts into a graph.
+                post_data = await response.json() # This actually converts data into JSON
+                graph = post_data.get("@graph", []) # convert the alerts into a list.
 
                 if graph == []:
                     print('No alerts')
@@ -116,7 +116,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     messageType = i.get("messageType")
                     if id not in cache:
                         await sendAlert(event, name, headline, description, messageType)
-                        cache[f"{id}"] = f"{expires}"
+                        cache[f"{id}"] = (expires, name, headline, description, messageType)
                         print(f"ALERT SENT! {getTime()}")
                         
 
@@ -175,16 +175,19 @@ async def poll_locations():
 async def clear_cache():
     currentTime = datetime.now(timezone.utc)
     todelete = {}
-    for alert, expires in cache.items():
-        expireTime = datetime.fromisoformat(expires)
-        if currentTime > expireTime:
-            todelete[f'{alert}'] = f'{expires}'
-            print(f'Marked alert ID {alert} for deletion.')
-    for alert in todelete:
-        if alert in cache:
-            deleted = cache.pop(alert, None)
-            print(f'Deleted id: {deleted}') # Debugging line, just to make sure things are being popped properly. Might help if this function explodes again.
-            print(f'Alert ID {alert} removed from cache.')
+    try:
+        for alert, tuple in cache.items():
+            expireTime = datetime.fromisoformat(tuple[0])
+            if currentTime > expireTime:
+                todelete[f'{alert}'] = tuple
+                print(f'Marked alert ID {alert} for deletion.')
+        for alert in todelete:
+            if alert in cache:
+                deleted = cache.pop(alert, None)
+                print(f'Deleted id: {deleted}') # Debugging line, just to make sure things are being popped properly. Might help if this function explodes again.
+                print(f'Alert ID {alert} removed from cache.')
+    except Exception as e:
+        print(f"Exception in clear_cache: {e}")
 
 async def msg_loop():
     await bot.wait_until_ready()
