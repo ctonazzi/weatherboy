@@ -1,4 +1,7 @@
-7/30/2025 v1.2.0
+7/31/2025 v1.2.0
 - Added new tag to all alerts that displays whether it is a new alert or an update to an older alert. This should clear up some confusion about repeat extreme heat warnings.
-- Added flood watch, flash flood warning, and flood warning to message repo.
+- Added more warnings.
+- Added Discord rich presence activity to bot, currently just shows active alert count.
+- Added !alerts command.
+- Backend overhaul of how alerts are cached and processed. This will help with adding more features in the future.
 - bugfix: found and repaired an issue with empty messages crashing bot.

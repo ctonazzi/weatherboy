@@ -27,7 +27,7 @@ cache = {}
 
 # Warning messages
 messages = {
-    "Tornado Emergency": "🟪🌪️🟪 TORNADO EMERGENCY for {} 🟪🌪️🟪\n{}\nSEEK SHELTER IMMEDIATELY. THIS IS A DEADLY SITUATION.\n@everyone", # implement soon
+    "Tornado Emergency": "🟪🌪️🟪 TORNADO EMERGENCY for {} 🟪🌪️🟪\n{}\nSEEK SHELTER IMMEDIATELY. THIS IS A DEADLY SITUATION.", # implement soon
     "PDS Tornado Warning": "🟥🌪️🟥 PDS TORNADO WARNING for {} 🟥🌪️🟥\n{}\nTHIS IS A PARTICULARLY DANGEROUS SITUATION. SEEK SHELTER IMMEDIATELY.", #implement soon
     "Tornado Warning": "🟥🌪️🟥 TORNADO WARNING for {} 🟥🌪️🟥\n{} ({})",
     "Tornado Watch": "🟨🌪️🟨 TORNADO WATCH for {} 🟨🌪️🟨\n{} ({})",
@@ -87,6 +87,18 @@ async def changelog(ctx):
         info = file.read()
     await ctx.send(info)
 
+@bot.command()
+async def alerts(ctx):
+    alerts = ""
+    for alert, tuple in cache.items():
+        if tuple[0] == "Tornado Warning":
+            alerts += tornadoCheck(tuple[1], tuple[3], tuple[2], tuple[4]) # name, description, headline, messageType
+            alerts += "\n"
+        else: 
+            alerts += messages[tuple[5]].format(tuple[1], tuple[2], tuple[4])
+            alerts += "\n"
+    await bot.get_channel(CHANNEL_ID).send(alerts)
+
 async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     try:
         api = f'https://api.weather.gov/alerts/active?point={point}'
@@ -116,7 +128,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     messageType = i.get("messageType")
                     if id not in cache:
                         await sendAlert(event, name, headline, description, messageType)
-                        cache[f"{id}"] = (expires, name, headline, description, messageType)
+                        cache[f"{id}"] = (expires, name, headline, description, messageType, event)
                         print(f"ALERT SENT! {getTime()}")
                         
 
@@ -139,21 +151,8 @@ async def sendAlert(type, name, headline, description, messageType):
     print(type)
     try:
         if type == "Tornado Warning":
-            print('TORNADO WARNING, LET US DETERMINE WHAT KIND...')
-            description = description,"".lower()
-            headline = headline,"".lower()
-            if "tornado emergency" in headline or "tornado emergency" in description:
-                print('TORNADO EMERGENCY')
-                alert = messages["Tornado Emergency"].format(name, headline)
-                await bot.get_channel(CHANNEL_ID).send(alert)
-            elif "particularly dangerous situation" in headline or "particularly dangerous situation" in description:
-                print('PDS TORNADO WARNING')
-                alert = messages["PDS Tornado Warning"].format(name, headline)
-                await bot.get_channel(CHANNEL_ID).send(alert)
-            else:
-                print('just a regular tornado warning')
-                alert = messages["Tornado Warning"].format(name, headline, messageType)
-                await bot.get_channel(CHANNEL_ID).send(alert)
+            tornadoType = await tornadoCheck(name, description, headline, messageType)
+            await bot.get_channel(CHANNEL_ID).send(tornadoType)
         else:
             alert = messages[type].format(name, headline, messageType)
             print(alert)
@@ -217,6 +216,22 @@ async def update_activity():
 # get current time
 def getTime():
     return datetime.now().strftime("%H:%M:%S")
+
+def tornadoCheck(name, description, headline, messageType):
+    print('TORNADO WARNING, LET US DETERMINE WHAT KIND...')
+    description = description,"".lower()
+    headline = headline,"".lower()
+    if "tornado emergency" in headline or "tornado emergency" in description:
+        print('TORNADO EMERGENCY')
+        alert = messages["Tornado Emergency"].format(name, headline)
+        return alert
+    elif "particularly dangerous situation" in headline or "particularly dangerous situation" in description:
+        print('PDS TORNADO WARNING')
+        alert = messages["PDS Tornado Warning"].format(name, headline)
+        return alert
+    else:
+        print('just a regular tornado warning')
+        alert = messages["Tornado Warning"].format(name, headline, messageType)
 
 # keep at end
 bot.run(TOKEN)
