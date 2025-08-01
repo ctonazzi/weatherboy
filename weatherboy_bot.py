@@ -51,6 +51,7 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 bot = commands.Bot(intents=intents, command_prefix='!')
+botFirstStart = True
 
 @bot.event
 async def on_ready():
@@ -60,7 +61,9 @@ async def on_ready():
 
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
-        await channel.send('Weatherboy is awake\nUse \'!info\' to learn more.')
+        if botFirstStart:
+            await channel.send('Weatherboy is awake\nUse \'!info\' to learn more.')
+            botFirstStart = False
         await poll_locations()
     else:
         print('!!! WEATHERBOY DID NOT FIND THE CHANNEL !!!')
