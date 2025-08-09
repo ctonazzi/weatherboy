@@ -11,12 +11,14 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 print(f'TOKEN: {TOKEN}')
+botFirstStart = True
 
 # Weather locations
 locations = {
     "Marion, IL": "37.7308,-88.9277",
     "Murray, KY": "36.6103,-88.3148",
-    "Champaign, IL": "40.1163,-88.2435"
+    "Champaign, IL": "40.1163,-88.2435",
+    "Tribune, KS": "38.0059,-101.8141"
 }
 
 # THIS is an empty table to hold the last modified information for any given location.
@@ -51,10 +53,11 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 bot = commands.Bot(intents=intents, command_prefix='!')
-botFirstStart = True
+
 
 @bot.event
 async def on_ready():
+    global botFirstStart
     print(f'{bot.user} successfully connected.')
 
     asyncio.create_task(msg_loop())
@@ -95,7 +98,7 @@ async def alerts(ctx):
     alerts = ""
     for alert, tuple in cache.items():
         if tuple[0] == "Tornado Warning":
-            alerts += tornadoCheck(tuple[1], tuple[3], tuple[2], tuple[4]) # name, description, headline, messageType
+            alerts += tornadoCheck(f"{tuple[1]}", f"{tuple[3]}", f"{tuple[2]}", f"{tuple[4]}") # name, description, headline, messageType
             alerts += "\n"
         else: 
             alerts += messages[tuple[5]].format(tuple[1], tuple[2], tuple[4])
@@ -154,7 +157,8 @@ async def sendAlert(type, name, headline, description, messageType):
     print(type)
     try:
         if type == "Tornado Warning":
-            tornadoType = await tornadoCheck(name, description, headline, messageType)
+            tornadoType = tornadoCheck(name, description, headline, messageType)
+            print(tornadoType)
             await bot.get_channel(CHANNEL_ID).send(tornadoType)
         else:
             alert = messages[type].format(name, headline, messageType)
@@ -235,6 +239,7 @@ def tornadoCheck(name, description, headline, messageType):
     else:
         print('just a regular tornado warning')
         alert = messages["Tornado Warning"].format(name, headline, messageType)
+        return alert
 
 # keep at end
 bot.run(TOKEN)
