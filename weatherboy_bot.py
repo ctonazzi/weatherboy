@@ -101,6 +101,8 @@ async def alerts(ctx):
             else: 
                 alerts += messages[tuple[5]].format(tuple[1], tuple[2], tuple[4])
                 alerts += "\n"
+        if alerts == "":
+            print("No active alerts")
         await bot.get_channel(CHANNEL_ID).send(alerts)
     except Exception as e:
         print(f"Command exception: {e}")
