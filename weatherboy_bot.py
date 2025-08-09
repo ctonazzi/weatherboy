@@ -17,8 +17,7 @@ botFirstStart = True
 locations = {
     "Marion, IL": "37.7308,-88.9277",
     "Murray, KY": "36.6103,-88.3148",
-    "Champaign, IL": "40.1163,-88.2435",
-    "Tribune, KS": "38.0059,-101.8141"
+    "Champaign, IL": "40.1163,-88.2435"
 }
 
 # THIS is an empty table to hold the last modified information for any given location.
