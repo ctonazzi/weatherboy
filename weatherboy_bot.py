@@ -95,15 +95,20 @@ async def changelog(ctx):
 
 @bot.command()
 async def alerts(ctx):
-    alerts = ""
-    for alert, tuple in cache.items():
-        if tuple[0] == "Tornado Warning":
-            alerts += tornadoCheck(f"{tuple[1]}", f"{tuple[3]}", f"{tuple[2]}", f"{tuple[4]}") # name, description, headline, messageType
-            alerts += "\n"
-        else: 
-            alerts += messages[tuple[5]].format(tuple[1], tuple[2], tuple[4])
-            alerts += "\n"
-    await bot.get_channel(CHANNEL_ID).send(alerts)
+    try:
+        alerts = ""
+        for alert, tuple in cache.items():
+            if tuple[0] == "Tornado Warning":
+                alerts += tornadoCheck(f"{tuple[1]}", f"{tuple[3]}", f"{tuple[2]}", f"{tuple[4]}") # name, description, headline, messageType
+                alerts += "\n"
+            else: 
+                alerts += messages[tuple[5]].format(tuple[1], tuple[2], tuple[4])
+                alerts += "\n"
+        if alerts == "":
+            print("No active alerts")
+        await bot.get_channel(CHANNEL_ID).send(alerts)
+    except Exception as e:
+        print(f"Command exception: {e}")
 
 async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     try:
