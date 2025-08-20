@@ -1,5 +1,8 @@
-7/24/2025 v1.1.2
-- bugfix: fixed an issue causing the bot to crash when an alert was deleted.
-- Added alert caching to hopefully prevent older alerts being sent when new ones are issued alongside them.
-- Added changelog
-- backend improvements to make the boy a little smoother
+7/31/2025 v1.2.1
+- Added new tag to all alerts that displays whether it is a new alert or an update to an older alert. This should clear up some confusion about repeat extreme heat warnings.
+- Added more alerts.
+- Added Discord rich presence activity to bot, currently just shows active alert count.
+- Added !alerts command.
+- Backend overhaul of how alerts are cached and processed. This will help with adding more features in the future.
+- bugfix: found and repaired an issue with empty messages crashing bot.
+- bugfix: bot loss of connection would result in online message being sent again. This was unintended behavior and should be fixed now.

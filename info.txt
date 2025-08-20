@@ -1,4 +1,4 @@
-Weatherboy v1.1.2 -- 7/27/2025
+Weatherboy v1.2.1 -- 7/31/2025
 A bot created to automatically send weather alerts from the NWS to your discord channel.
 Currently supports up to 10 locations to prevent rate limiting.
 Some alert types may not currently be supported.
@@ -7,4 +7,5 @@ Commands (prefix '!'):
 ping -- poke the boy and make sure he's alive
 info -- displays this info
 changelog -- view most recent changes
+alerts -- lists current active alerts.
 -- and more soon!
