@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
-print(f'TOKEN: {TOKEN}')
+USER = os.getenv('USER')
+print(f'USER AGENT: {USER}')
 botFirstStart = True
 
 # Weather locations
@@ -115,7 +116,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
         api = f'https://api.weather.gov/alerts/active?point={point}'
         headers = {
             "Accept": "application/ld+json",
-            "User-Agent": "weatherboy_test_bot_automated_alerts, ctonazzi@gmail.com"
+            f"User-Agent": "weatherboy_test_bot_automated_alerts, {USER}" # User-Agent required by NWS API.
         }
 
         if name in last_modified:
