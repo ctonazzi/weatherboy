@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
-print(f'TOKEN: {TOKEN}')
+USER = os.getenv('USER')
+print(f'USER AGENT: {USER}')
 botFirstStart = True
 
 # Weather locations
@@ -43,7 +44,8 @@ messages = {
     "Flood Warning": "🟥🌊🟥 FLOOD WARNING for {} 🟥🌊🟥\n{} ({})",
     "Flood Watch": "🟨🌊🟨 FLOOD WATCH for {} 🟨🌊🟨\n{} ({})",
     "Air Quality Alert": "🟨🌁🟨 AIR QUALITY ALERT for {} 🟨🌁🟨\n{} ({})",
-    "Dense Fog Advisory": "🟨🌫️🟨 DENSE FOG ADVISORY for {} 🟨🌫️🟨\n{} ({})"
+    "Dense Fog Advisory": "🟨🌫️🟨 DENSE FOG ADVISORY for {} 🟨🌫️🟨\n{} ({})",
+    "Special Weather Statement": "🟨📣🟨 SPECIAL WEATHER STATEMENT for {} 🟨📣🟨 ({})"
 }
 
 # Discord API vars
@@ -92,7 +94,7 @@ async def changelog(ctx):
         info = file.read()
     await ctx.send(info)
 
-@bot.command()
+@bot.command() # show all active alerts
 async def alerts(ctx):
     try:
         alerts = ""
@@ -104,7 +106,7 @@ async def alerts(ctx):
                 alerts += messages[tuple[5]].format(tuple[1], tuple[2], tuple[4])
                 alerts += "\n"
         if alerts == "":
-            print("No active alerts")
+            alerts = "No active alerts"
         await bot.get_channel(CHANNEL_ID).send(alerts)
     except Exception as e:
         print(f"Command exception: {e}")
@@ -114,7 +116,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
         api = f'https://api.weather.gov/alerts/active?point={point}'
         headers = {
             "Accept": "application/ld+json",
-            "User-Agent": "weatherboy_test_bot_automated_alerts, ctonazzi@gmail.com"
+            f"User-Agent": "weatherboy_test_bot_automated_alerts, {USER}" # User-Agent required by NWS API.
         }
 
         if name in last_modified:
@@ -136,7 +138,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     description = i.get("description")
                     expires = i.get("expires")
                     messageType = i.get("messageType")
-                    if id not in cache:
+                    if id not in cache and event in messages: # check if in cache AND if the alert type is in the system.
                         await sendAlert(event, name, headline, description, messageType)
                         cache[f"{id}"] = (expires, name, headline, description, messageType, event)
                         print(f"ALERT SENT! {getTime()}")
@@ -160,10 +162,15 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
 async def sendAlert(type, name, headline, description, messageType):
     print(type)
     try:
+        # IF statement for the exceptions (tornado, special weather). These need different formatting.
         if type == "Tornado Warning":
             tornadoType = tornadoCheck(name, description, headline, messageType)
             print(tornadoType)
             await bot.get_channel(CHANNEL_ID).send(tornadoType)
+        elif type == "Special Weather Statement":
+            alert = messages[type].format(name, messageType)
+            embedDescription = discord.Embed(title="Special Weather Statement", description=description) # Creates an embedded text box. This looks cool, consider refactoring to support this for ALL alerts.
+            await bot.get_channel(CHANNEL_ID).send(f'{alert}\n', embed=embedDescription)
         else:
             alert = messages[type].format(name, headline, messageType)
             print(alert)
