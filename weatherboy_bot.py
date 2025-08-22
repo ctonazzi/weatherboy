@@ -237,8 +237,8 @@ def getTime():
 
 def tornadoCheck(name, description, headline, messageType):
     print('TORNADO WARNING, LET US DETERMINE WHAT KIND...')
-    description = description,"".lower()
-    headline = headline,"".lower()
+    description = description.lower()
+    headline = headline.lower()
     if "tornado emergency" in headline or "tornado emergency" in description:
         print('TORNADO EMERGENCY')
         alert = messages["Tornado Emergency"].format(name, headline)
