@@ -179,14 +179,18 @@ async def sendAlert(type, name, headline, description, messageType):
         print(f'Exception: {e}. This is likely not in the library of warnings, so either add it or ignore this.')
 
 async def poll_locations():
-    async with aiohttp.ClientSession() as session:
-        while True:
-            for name, point in locations.items():
-                await fetchAlerts(session, name, point)
-                await asyncio.sleep(6)
-            await clear_cache() # clean it
-            await update_activity() # update it
-            await asyncio.sleep(60)
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                while True:
+                    for name, point in locations.items():
+                        await fetchAlerts(session, name, point)
+                        await asyncio.sleep(6)
+                    await clear_cache() # clean it
+                    await update_activity() # update it
+                    await asyncio.sleep(60)
+        except Exception as e:
+            print(f'Session exception: {e}. Attempting to create new session.')
 
 # clean cache
 async def clear_cache():
