@@ -1,4 +1,4 @@
-Weatherboy v1.2.3 -- 8/22/2025
+Weatherboy v1.2.4 -- 8/26/2025
 A bot created to automatically send weather alerts from the NWS to your discord channel.
 Currently supports up to 10 locations to prevent rate limiting.
 Some alert types may not currently be supported.
