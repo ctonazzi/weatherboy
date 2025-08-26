@@ -179,14 +179,18 @@ async def sendAlert(type, name, headline, description, messageType):
         print(f'Exception: {e}. This is likely not in the library of warnings, so either add it or ignore this.')
 
 async def poll_locations():
-    async with aiohttp.ClientSession() as session:
-        while True:
-            for name, point in locations.items():
-                await fetchAlerts(session, name, point)
-                await asyncio.sleep(6)
-            await clear_cache() # clean it
-            await update_activity() # update it
-            await asyncio.sleep(60)
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                while True:
+                    for name, point in locations.items():
+                        await fetchAlerts(session, name, point)
+                        await asyncio.sleep(6)
+                    await clear_cache() # clean it
+                    await update_activity() # update it
+                    await asyncio.sleep(60)
+        except Exception as e:
+            print(f'Session exception: {e}. Attempting to create new session.')
 
 # clean cache
 async def clear_cache():
@@ -222,12 +226,14 @@ async def msg_loop():
             print("No channel")
 
 async def update_activity():
-    alertCount = len(cache)
-    if alertCount == 1:
-        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{alertCount} active alert"))
-    else:
-        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{alertCount} active alerts"))
-    print("activity updated") # debugging line-- remove in production version
+    try:
+        alertCount = len(cache)
+        if alertCount == 1:
+            await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{alertCount} active alert"))
+        else:
+            await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{alertCount} active alerts"))
+    except Exception as e:
+        print(f'Exception in update_activity: {e}')
 
 # non-asyncronous functions
 
@@ -237,8 +243,8 @@ def getTime():
 
 def tornadoCheck(name, description, headline, messageType):
     print('TORNADO WARNING, LET US DETERMINE WHAT KIND...')
-    description = description,"".lower()
-    headline = headline,"".lower()
+    description = description.lower()
+    headline = headline.lower()
     if "tornado emergency" in headline or "tornado emergency" in description:
         print('TORNADO EMERGENCY')
         alert = messages["Tornado Emergency"].format(name, headline)

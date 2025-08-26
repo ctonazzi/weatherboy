@@ -1,10 +1,11 @@
-8/22/2025 v1.2.3
+8/26/2025 v1.2.4
 - Added new tag to all alerts that displays whether it is a new alert or an update to an older alert. This should clear up some confusion about repeat extreme heat warnings.
 - Added more alerts.
 - Added Discord rich presence activity to bot, currently just shows active alert count.
 - Added !alerts command.
 - Backend overhaul of how alerts are cached and processed. This will help with adding more features in the future.
 - Added support for special weather statements. These will display the full description in an embedded message.
+- Added more exception handling to solve some issues with weak network causing crashes.
 - Removed user-agent from code. This is more secure.
 - bugfix: found and repaired an issue with empty messages crashing bot.
 - bugfix: bot loss of connection would result in online message being sent again. This was unintended behavior and should be fixed now.
