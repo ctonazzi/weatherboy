@@ -66,7 +66,7 @@ async def on_ready():
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         if botFirstStart:
-            # await channel.send('Weatherboy is awake\nUse \'!info\' to learn more.')
+            await channel.send('Weatherboy has been updated.\nUse \'!info\' to learn more.')
             botFirstStart = False
         await poll_locations()
     else:
@@ -129,7 +129,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                 graph = post_data.get("@graph", []) # convert the alerts into a list.
 
                 if graph == []:
-                    print('No alerts')
+                    print(f"No alerts {getTime()}")
                 
                 for i in graph:
                     id = i.get("id")
