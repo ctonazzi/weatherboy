@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
-USER = os.getenv('USER')
+USER = os.getenv('USER') or ""
 print(f'USER AGENT: {USER}')
 botFirstStart = True
 
@@ -66,7 +66,7 @@ async def on_ready():
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         if botFirstStart:
-            await channel.send('Weatherboy is awake\nUse \'!info\' to learn more.')
+            # await channel.send('Weatherboy is awake\nUse \'!info\' to learn more.')
             botFirstStart = False
         await poll_locations()
     else:
@@ -116,10 +116,10 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
         api = f'https://api.weather.gov/alerts/active?point={point}'
         headers = {
             "Accept": "application/ld+json",
-            f"User-Agent": "weatherboy_test_bot_automated_alerts, {USER}" # User-Agent required by NWS API.
+            "User-Agent": f"weatherboy_test_bot_automated_alerts, {USER}" # User-Agent required by NWS API.
         }
 
-        if name in last_modified:
+        if name in last_modified and last_modified[name] is not None:
             headers["If-Modified-Since"] = last_modified[name]
 
         async with session.get(api, headers=headers) as response:
@@ -188,7 +188,7 @@ async def poll_locations():
                         await asyncio.sleep(6)
                     await clear_cache() # clean it
                     await update_activity() # update it
-                    await asyncio.sleep(60)
+                    await asyncio.sleep(10)
         except Exception as e:
             print(f'Session exception: {e}. Attempting to create new session.')
 
