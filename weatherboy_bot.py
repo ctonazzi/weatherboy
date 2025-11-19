@@ -61,11 +61,10 @@ async def on_ready():
     global botFirstStart
     print(f'{bot.user} successfully connected.')
 
-    asyncio.create_task(msg_loop())
-
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         if botFirstStart:
+            asyncio.create_task(msg_loop()) # Moved here to see if this will prevent double alerts when connection is re-established.
             await channel.send('Weatherboy has been updated.\nUse \'!info\' to learn more.')
             botFirstStart = False
         await poll_locations()
@@ -236,6 +235,7 @@ async def update_activity():
         print(f'Exception in update_activity: {e}')
 
 # non-asyncronous functions
+# ------------------------------------------------------------------------------------------------------------------------------------------
 
 # get current time
 def getTime():
