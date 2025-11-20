@@ -13,6 +13,7 @@ CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 USER = os.getenv('USER') or ""
 print(f'USER AGENT: {USER}')
 botFirstStart = True
+poll_task = None # This is where the poll loop is held.
 
 # Weather locations
 locations = {
@@ -64,10 +65,10 @@ async def on_ready():
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         if botFirstStart:
-            asyncio.create_task(msg_loop()) # Moved here to see if this will prevent double alerts when connection is re-established.
-            await channel.send('Weatherboy has been updated.\nUse \'!info\' to learn more.')
+            asyncio.create_task(msg_loop())
+            asyncio.create_task(poll_locations())
+            # await channel.send('Weatherboy has been updated.\nUse \'!info\' to learn more.')
             botFirstStart = False
-        await poll_locations()
     else:
         print('!!! WEATHERBOY DID NOT FIND THE CHANNEL !!!')
 
