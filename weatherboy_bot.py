@@ -13,6 +13,7 @@ CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 USER = os.getenv('USER') or ""
 print(f'USER AGENT: {USER}')
 botFirstStart = True
+poll_task = None # This is where the poll loop is held.
 
 # Weather locations
 locations = {
@@ -61,14 +62,13 @@ async def on_ready():
     global botFirstStart
     print(f'{bot.user} successfully connected.')
 
-    asyncio.create_task(msg_loop())
-
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         if botFirstStart:
-            await channel.send('Weatherboy has been updated.\nUse \'!info\' to learn more.')
+            asyncio.create_task(msg_loop())
+            asyncio.create_task(poll_locations())
+            # await channel.send('Weatherboy has been updated.\nUse \'!info\' to learn more.')
             botFirstStart = False
-        await poll_locations()
     else:
         print('!!! WEATHERBOY DID NOT FIND THE CHANNEL !!!')
 
@@ -236,6 +236,7 @@ async def update_activity():
         print(f'Exception in update_activity: {e}')
 
 # non-asyncronous functions
+# ------------------------------------------------------------------------------------------------------------------------------------------
 
 # get current time
 def getTime():
