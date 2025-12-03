@@ -1,16 +1,2 @@
-11/18/2025 v1.2.6
-- Added new tag to all alerts that displays whether it is a new alert or an update to an older alert. This should clear up some confusion about repeat extreme heat warnings.
-- Added more alerts.
-- Added Discord rich presence activity to bot, currently just shows active alert count.
-- Added !alerts command.
-- Backend overhaul of how alerts are cached and processed. This will help with adding more features in the future.
-- Added support for special weather statements. These will display the full description in an embedded message.
-- Added more exception handling to solve some issues with weak network causing crashes.
-- Removed user-agent from code. This is more secure.
-- bugfix: found and repaired an issue with empty messages crashing bot.
-- bugfix: bot loss of connection would result in online message being sent again. This was unintended behavior and should be fixed now.
-- bugfix: using !alerts with no active alerts will now tell you that there are no active alerts.
-- bugfix: alerts status should now accurately reflect the number of alerts in the cache.
-- bugfix: patched an error that would occur when a longer than typical connection disrupted occurred, which attempted to send data over a closing transport.
-- bugfix: the NWS updated their API to no longer include a last-updated header. This caused a crash when trying to get most recent alerts. Should be fixed now.
-- bugfix: added check when connection is re-established to hopefully prevent duplicate alert messages.
+12/3/2025 v1.3.0
+- Added support for 'destructive' tag for Severe Thunderstorm Warning. These are issued by the NWS for specific hazardous conditions which trigger WEA activation.
