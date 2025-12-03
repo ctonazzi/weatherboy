@@ -37,6 +37,7 @@ messages = {
     "Extreme Heat Warning": "🟨🔥🟨 EXTREME HEAT WARNING for {} 🟨🔥🟨\n{} ({})",
     "Extreme Wind Warning": "🟪💨🟪 EXTREME WIND WARNING for {} 🟪💨🟪\n{} ({})\nSUSTAINED WINDS OF 110+ MPH ARE EXPECTED. SEEK SHELTER IMMEDIATELY.",
     "Extreme Cold Warning": "🟨🥶🟨 EXTREME COLD WARNING for {} 🟨🥶🟨\n {} ({})",
+    "Destructive Severe Thunderstorm Warning": "🟪⛈️🟪 DESTRUCTIVE SEVERE THUNDERSTORM WARNING for {} 🟪⛈️🟪\n{} ({})",
     "Severe Thunderstorm Warning": "🟥⛈️🟥 SEVERE THUNDERSTORM WARNING for {} 🟥⛈️🟥\n{} ({})",
     "Severe Thunderstorm Watch": "🟨⛈️🟨 SEVERE THUNDERSTORM WATCH for {} 🟨⛈️🟨\n{} ({})",
     "Winter Storm Warning": "🟥🌨️🟥 WINTER STORM WARNING for {} 🟥🌨️🟥\n{} ({})",
@@ -138,9 +139,10 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     description = i.get("description")
                     expires = i.get("expires")
                     messageType = i.get("messageType")
+                    tags = i.get("tags", [])
                     if id not in cache and event in messages: # check if in cache AND if the alert type is in the system.
-                        await sendAlert(event, name, headline, description, messageType)
-                        cache[f"{id}"] = (expires, name, headline, description, messageType, event)
+                        await sendAlert(event, name, headline, description, messageType, tags)
+                        cache[f"{id}"] = (expires, name, headline, description, messageType, event, tags)
                         print(f"ALERT SENT! {getTime()}")
                         
 
@@ -159,7 +161,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     except aiohttp.ClientError as e:
         print(f'Error requesting data: {e}')
 
-async def sendAlert(type, name, headline, description, messageType):
+async def sendAlert(type, name, headline, description, messageType, tags):
     print(type)
     try:
         # IF statement for the exceptions (tornado, special weather). These need different formatting.
@@ -171,6 +173,9 @@ async def sendAlert(type, name, headline, description, messageType):
             alert = messages[type].format(name, messageType)
             embedDescription = discord.Embed(title="Special Weather Statement", description=description) # Creates an embedded text box. This looks cool, consider refactoring to support this for ALL alerts.
             await bot.get_channel(CHANNEL_ID).send(f'{alert}\n', embed=embedDescription)
+        elif type == "Severe Thunderstorm Warning":
+            severeTStorm = severeTCheck(name, headline, messageType, tags)
+            await bot.get_channel(CHANNEL_ID).send(severeTStorm)
         else:
             alert = messages[type].format(name, headline, messageType)
             print(alert)
@@ -242,6 +247,7 @@ async def update_activity():
 def getTime():
     return datetime.now().strftime("%H:%M:%S")
 
+# checks if the tornado warning is regular, PDS, or emergency.
 def tornadoCheck(name, description, headline, messageType):
     print('TORNADO WARNING, LET US DETERMINE WHAT KIND...')
     description = description.lower()
@@ -257,6 +263,16 @@ def tornadoCheck(name, description, headline, messageType):
     else:
         print('just a regular tornado warning')
         alert = messages["Tornado Warning"].format(name, headline, messageType)
+        return alert
+    
+# checks if severe t-storm is tagged as 'destructive'
+def severeTCheck(name, headline, messageType, tags):
+    if "DamageThreatDestructive" in tags:
+        print("Destructive T-storm")
+        alert = messages["Destructive Severe Thunderstorm Warning"].format(name, headline, messageType)
+        return alert
+    else:
+        alert = messages["Severe Thunderstorm Warning"].format(name, headline, messageType)
         return alert
 
 # keep at end
