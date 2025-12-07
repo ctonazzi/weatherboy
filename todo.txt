@@ -1,4 +1,3 @@
-TODO: Store locations and alert messages in separate files (not directly in code)
 TODO: consider refactoring all alerts to use message box format rather than standard message layout.
 TODO: add commands to add/remove locations
 - This will likely require a library to parse locations to coordinates (lat,long)

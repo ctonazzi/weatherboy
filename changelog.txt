@@ -1,2 +1,3 @@
 12/3/2025 v1.3.0
 - Added support for 'destructive' tag for Severe Thunderstorm Warning. These are issued by the NWS for specific hazardous conditions which trigger WEA activation.
+- Moved locations and messages to separate files. This sets the groundwork for adding locations in the future.

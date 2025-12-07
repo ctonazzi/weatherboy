@@ -2,6 +2,7 @@ import os
 import discord
 import asyncio
 import aiohttp
+import json
 from dotenv import load_dotenv
 from discord.ext import commands
 from datetime import datetime, timezone
@@ -11,16 +12,23 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 USER = os.getenv('USER') or ""
+MESSAGES_PATH = os.getenv('MESSAGES_PATH')
+LOCATIONS_PATH = os.getenv('LOCATIONS_PATH')
 print(f'USER AGENT: {USER}')
 botFirstStart = True
 poll_task = None # This is where the poll loop is held.
 
+def load_json(path: str):
+    try:
+        with open(path, 'r', encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise RuntimeError(f"Config not found: {path}")
+    except json.JSONDecoderError as e:
+        raise RuntimeError(f"Invalid JSON in {path}: {e}")
+
 # Weather locations
-locations = {
-    "Marion, IL": "37.7308,-88.9277",
-    "Murray, KY": "36.6103,-88.3148",
-    "Champaign, IL": "40.1163,-88.2435"
-}
+locations = load_json(LOCATIONS_PATH)
 
 # THIS is an empty table to hold the last modified information for any given location.
 last_modified = {}
@@ -29,26 +37,7 @@ last_modified = {}
 cache = {}
 
 # Warning messages
-messages = {
-    "Tornado Emergency": "🟪🌪️🟪 TORNADO EMERGENCY for {} 🟪🌪️🟪\n{}\nSEEK SHELTER IMMEDIATELY. THIS IS A DEADLY SITUATION.", # implement soon
-    "PDS Tornado Warning": "🟥🌪️🟥 PDS TORNADO WARNING for {} 🟥🌪️🟥\n{}\nTHIS IS A PARTICULARLY DANGEROUS SITUATION. SEEK SHELTER IMMEDIATELY.", #implement soon
-    "Tornado Warning": "🟥🌪️🟥 TORNADO WARNING for {} 🟥🌪️🟥\n{} ({})",
-    "Tornado Watch": "🟨🌪️🟨 TORNADO WATCH for {} 🟨🌪️🟨\n{} ({})",
-    "Extreme Heat Warning": "🟨🔥🟨 EXTREME HEAT WARNING for {} 🟨🔥🟨\n{} ({})",
-    "Extreme Wind Warning": "🟪💨🟪 EXTREME WIND WARNING for {} 🟪💨🟪\n{} ({})\nSUSTAINED WINDS OF 110+ MPH ARE EXPECTED. SEEK SHELTER IMMEDIATELY.",
-    "Extreme Cold Warning": "🟨🥶🟨 EXTREME COLD WARNING for {} 🟨🥶🟨\n {} ({})",
-    "Destructive Severe Thunderstorm Warning": "🟪⛈️🟪 DESTRUCTIVE SEVERE THUNDERSTORM WARNING for {} 🟪⛈️🟪\n{} ({})",
-    "Severe Thunderstorm Warning": "🟥⛈️🟥 SEVERE THUNDERSTORM WARNING for {} 🟥⛈️🟥\n{} ({})",
-    "Severe Thunderstorm Watch": "🟨⛈️🟨 SEVERE THUNDERSTORM WATCH for {} 🟨⛈️🟨\n{} ({})",
-    "Winter Storm Warning": "🟥🌨️🟥 WINTER STORM WARNING for {} 🟥🌨️🟥\n{} ({})",
-    "Winter Storm Watch": "🟨🌨️🟨 WINTER STORM WATCH for {} 🟨🌨️🟨\n{} ({})",
-    "Flash Flood Warning": "🟥🌊🟥 FLASH FLOOD WARNING for {} 🟥🌊🟥\n{} ({})",
-    "Flood Warning": "🟥🌊🟥 FLOOD WARNING for {} 🟥🌊🟥\n{} ({})",
-    "Flood Watch": "🟨🌊🟨 FLOOD WATCH for {} 🟨🌊🟨\n{} ({})",
-    "Air Quality Alert": "🟨🌁🟨 AIR QUALITY ALERT for {} 🟨🌁🟨\n{} ({})",
-    "Dense Fog Advisory": "🟨🌫️🟨 DENSE FOG ADVISORY for {} 🟨🌫️🟨\n{} ({})",
-    "Special Weather Statement": "🟨📣🟨 SPECIAL WEATHER STATEMENT for {} 🟨📣🟨 ({})"
-}
+messages = load_json(MESSAGES_PATH)
 
 # Discord API vars
 intents = discord.Intents.default()
