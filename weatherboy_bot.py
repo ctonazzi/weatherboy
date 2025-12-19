@@ -2,6 +2,7 @@ import os
 import discord
 import asyncio
 import aiohttp
+import json
 from dotenv import load_dotenv
 from discord.ext import commands
 from datetime import datetime, timezone
@@ -11,16 +12,23 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 USER = os.getenv('USER') or ""
+MESSAGES_PATH = os.getenv('MESSAGES_PATH')
+LOCATIONS_PATH = os.getenv('LOCATIONS_PATH')
 print(f'USER AGENT: {USER}')
 botFirstStart = True
 poll_task = None # This is where the poll loop is held.
 
+def load_json(path: str):
+    try:
+        with open(path, 'r', encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise RuntimeError(f"Config not found: {path}")
+    except json.JSONDecoderError as e:
+        raise RuntimeError(f"Invalid JSON in {path}: {e}")
+
 # Weather locations
-locations = {
-    "Marion, IL": "37.7308,-88.9277",
-    "Murray, KY": "36.6103,-88.3148",
-    "Champaign, IL": "40.1163,-88.2435"
-}
+locations = load_json(LOCATIONS_PATH)
 
 # THIS is an empty table to hold the last modified information for any given location.
 last_modified = {}
@@ -29,25 +37,7 @@ last_modified = {}
 cache = {}
 
 # Warning messages
-messages = {
-    "Tornado Emergency": "🟪🌪️🟪 TORNADO EMERGENCY for {} 🟪🌪️🟪\n{}\nSEEK SHELTER IMMEDIATELY. THIS IS A DEADLY SITUATION.", # implement soon
-    "PDS Tornado Warning": "🟥🌪️🟥 PDS TORNADO WARNING for {} 🟥🌪️🟥\n{}\nTHIS IS A PARTICULARLY DANGEROUS SITUATION. SEEK SHELTER IMMEDIATELY.", #implement soon
-    "Tornado Warning": "🟥🌪️🟥 TORNADO WARNING for {} 🟥🌪️🟥\n{} ({})",
-    "Tornado Watch": "🟨🌪️🟨 TORNADO WATCH for {} 🟨🌪️🟨\n{} ({})",
-    "Extreme Heat Warning": "🟨🔥🟨 EXTREME HEAT WARNING for {} 🟨🔥🟨\n{} ({})",
-    "Extreme Wind Warning": "🟪💨🟪 EXTREME WIND WARNING for {} 🟪💨🟪\n{} ({})\nSUSTAINED WINDS OF 110+ MPH ARE EXPECTED. SEEK SHELTER IMMEDIATELY.",
-    "Extreme Cold Warning": "🟨🥶🟨 EXTREME COLD WARNING for {} 🟨🥶🟨\n {} ({})",
-    "Severe Thunderstorm Warning": "🟥⛈️🟥 SEVERE THUNDERSTORM WARNING for {} 🟥⛈️🟥\n{} ({})",
-    "Severe Thunderstorm Watch": "🟨⛈️🟨 SEVERE THUNDERSTORM WATCH for {} 🟨⛈️🟨\n{} ({})",
-    "Winter Storm Warning": "🟥🌨️🟥 WINTER STORM WARNING for {} 🟥🌨️🟥\n{} ({})",
-    "Winter Storm Watch": "🟨🌨️🟨 WINTER STORM WATCH for {} 🟨🌨️🟨\n{} ({})",
-    "Flash Flood Warning": "🟥🌊🟥 FLASH FLOOD WARNING for {} 🟥🌊🟥\n{} ({})",
-    "Flood Warning": "🟥🌊🟥 FLOOD WARNING for {} 🟥🌊🟥\n{} ({})",
-    "Flood Watch": "🟨🌊🟨 FLOOD WATCH for {} 🟨🌊🟨\n{} ({})",
-    "Air Quality Alert": "🟨🌁🟨 AIR QUALITY ALERT for {} 🟨🌁🟨\n{} ({})",
-    "Dense Fog Advisory": "🟨🌫️🟨 DENSE FOG ADVISORY for {} 🟨🌫️🟨\n{} ({})",
-    "Special Weather Statement": "🟨📣🟨 SPECIAL WEATHER STATEMENT for {} 🟨📣🟨 ({})"
-}
+messages = load_json(MESSAGES_PATH)
 
 # Discord API vars
 intents = discord.Intents.default()
@@ -138,9 +128,10 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     description = i.get("description")
                     expires = i.get("expires")
                     messageType = i.get("messageType")
+                    tags = i.get("tags", [])
                     if id not in cache and event in messages: # check if in cache AND if the alert type is in the system.
-                        await sendAlert(event, name, headline, description, messageType)
-                        cache[f"{id}"] = (expires, name, headline, description, messageType, event)
+                        await sendAlert(event, name, headline, description, messageType, tags)
+                        cache[f"{id}"] = (expires, name, headline, description, messageType, event, tags)
                         print(f"ALERT SENT! {getTime()}")
                         
 
@@ -159,24 +150,17 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     except aiohttp.ClientError as e:
         print(f'Error requesting data: {e}')
 
-async def sendAlert(type, name, headline, description, messageType):
+async def sendAlert(type, name, headline, description, messageType, tags):
     print(type)
     try:
-        # IF statement for the exceptions (tornado, special weather). These need different formatting.
-        if type == "Tornado Warning":
-            tornadoType = tornadoCheck(name, description, headline, messageType)
-            print(tornadoType)
-            await bot.get_channel(CHANNEL_ID).send(tornadoType)
-        elif type == "Special Weather Statement":
-            alert = messages[type].format(name, messageType)
-            embedDescription = discord.Embed(title="Special Weather Statement", description=description) # Creates an embedded text box. This looks cool, consider refactoring to support this for ALL alerts.
-            await bot.get_channel(CHANNEL_ID).send(f'{alert}\n', embed=embedDescription)
+        alert, embed = chooseAlert(type, name, headline, description, messageType, tags)
+        # Check if embed is present (Rare cases it won't be)
+        if embed:
+            await bot.get_channel(CHANNEL_ID).send(alert, embed=embed)
         else:
-            alert = messages[type].format(name, headline, messageType)
-            print(alert)
             await bot.get_channel(CHANNEL_ID).send(alert)
     except Exception as e:
-        print(f'Exception: {e}. This is likely not in the library of warnings, so either add it or ignore this.')
+        print(f'Exception in sendAlert: {e}')
 
 async def poll_locations():
     while True:
@@ -242,6 +226,7 @@ async def update_activity():
 def getTime():
     return datetime.now().strftime("%H:%M:%S")
 
+# checks if the tornado warning is regular, PDS, or emergency.
 def tornadoCheck(name, description, headline, messageType):
     print('TORNADO WARNING, LET US DETERMINE WHAT KIND...')
     description = description.lower()
@@ -258,6 +243,37 @@ def tornadoCheck(name, description, headline, messageType):
         print('just a regular tornado warning')
         alert = messages["Tornado Warning"].format(name, headline, messageType)
         return alert
+    
+# checks if severe t-storm is tagged as 'destructive'
+def severeTCheck(name, headline, messageType, tags):
+    if "DamageThreatDestructive" in tags:
+        print("Destructive T-storm")
+        alert = messages["Destructive Severe Thunderstorm Warning"].format(name, headline, messageType)
+        return alert
+    else:
+        alert = messages["Severe Thunderstorm Warning"].format(name, headline, messageType)
+        return alert
+    
+def chooseAlert(type, name, headline, description, messageType, tags):
+    # IF statement for separating standard warnings from the ones that require special attention.
+    if type == "Tornado Warning":
+        tornadoType = tornadoCheck(name, description, headline, messageType)
+        print(tornadoType)
+        embedDescription = discord.Embed(title=type, description=description)
+        return tornadoType, embedDescription
+    elif type == "Special Weather Statement":
+        alert = messages[type].format(name, messageType)
+        embedDescription = discord.Embed(title=type, description=description)
+        return alert, embedDescription
+    elif type == "Severe Thunderstorm Warning":
+        severeTStorm = severeTCheck(name, headline, messageType, tags)
+        embedDescription = discord.Embed(title=type, description=description)
+        return severeTStorm, embedDescription
+    else:
+        alert = messages[type].format(name, headline, messageType)
+        print(alert)
+        embedDescription = discord.Embed(title=type, description=description)
+        return alert, embedDescription
 
 # keep at end
 bot.run(TOKEN)

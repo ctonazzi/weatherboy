@@ -1,9 +1,6 @@
-TODO: consider refactoring all alerts to use message box format rather than standard message layout.
 TODO: add commands to add/remove locations
 - This will likely require a library to parse locations to coordinates (lat,long)
-- Locations will need to be saved and read from an external file for persistence across sessions.
 - Exception handling for empty string, location out of range (not in the US). --- MAY REQUIRE MACHINE LEARNING
 - May require refactoring of the API call function to prevent rate limiting in the event a goober adds 500 locations.
 TODO: refactor main bot script, consider moving API call section to own script.
 - Move message formatting to its own class
-- Message table could be moved to an external file (CSV or SQLite DB)
