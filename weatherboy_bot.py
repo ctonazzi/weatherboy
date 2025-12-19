@@ -153,24 +153,14 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
 async def sendAlert(type, name, headline, description, messageType, tags):
     print(type)
     try:
-        # IF statement for the exceptions (tornado, special weather). These need different formatting.
-        if type == "Tornado Warning":
-            tornadoType = tornadoCheck(name, description, headline, messageType)
-            print(tornadoType)
-            await bot.get_channel(CHANNEL_ID).send(tornadoType)
-        elif type == "Special Weather Statement":
-            alert = messages[type].format(name, messageType)
-            embedDescription = discord.Embed(title="Special Weather Statement", description=description) # Creates an embedded text box. This looks cool, consider refactoring to support this for ALL alerts.
-            await bot.get_channel(CHANNEL_ID).send(f'{alert}\n', embed=embedDescription)
-        elif type == "Severe Thunderstorm Warning":
-            severeTStorm = severeTCheck(name, headline, messageType, tags)
-            await bot.get_channel(CHANNEL_ID).send(severeTStorm)
+        alert, embed = chooseAlert(type, name, headline, description, messageType, tags)
+        # Check if embed is present (Rare cases it won't be)
+        if embed:
+            await bot.get_channel(CHANNEL_ID).send(alert, embed=embed)
         else:
-            alert = messages[type].format(name, headline, messageType)
-            print(alert)
             await bot.get_channel(CHANNEL_ID).send(alert)
     except Exception as e:
-        print(f'Exception: {e}. This is likely not in the library of warnings, so either add it or ignore this.')
+        print(f'Exception in sendAlert: {e}')
 
 async def poll_locations():
     while True:
@@ -263,6 +253,27 @@ def severeTCheck(name, headline, messageType, tags):
     else:
         alert = messages["Severe Thunderstorm Warning"].format(name, headline, messageType)
         return alert
+    
+def chooseAlert(type, name, headline, description, messageType, tags):
+    # IF statement for separating standard warnings from the ones that require special attention.
+    if type == "Tornado Warning":
+        tornadoType = tornadoCheck(name, description, headline, messageType)
+        print(tornadoType)
+        embedDescription = discord.Embed(title=type, description=description)
+        return tornadoType, embedDescription
+    elif type == "Special Weather Statement":
+        alert = messages[type].format(name, messageType)
+        embedDescription = discord.Embed(title=type, description=description)
+        return alert, embedDescription
+    elif type == "Severe Thunderstorm Warning":
+        severeTStorm = severeTCheck(name, headline, messageType, tags)
+        embedDescription = discord.Embed(title=type, description=description)
+        return severeTStorm, embedDescription
+    else:
+        alert = messages[type].format(name, headline, messageType)
+        print(alert)
+        embedDescription = discord.Embed(title=type, description=description)
+        return alert, embedDescription
 
 # keep at end
 bot.run(TOKEN)
