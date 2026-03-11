@@ -128,7 +128,7 @@ async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
                     description = i.get("description")
                     expires = i.get("expires")
                     messageType = i.get("messageType")
-                    tags = i.get("tags", [])
+                    tags = i.get("thunderstormDamageThreat", [])
                     if id not in cache and event in messages: # check if in cache AND if the alert type is in the system.
                         await sendAlert(event, name, headline, description, messageType, tags)
                         cache[f"{id}"] = (expires, name, headline, description, messageType, event, tags)
@@ -245,8 +245,8 @@ def tornadoCheck(name, description, headline, messageType):
         return alert
     
 # checks if severe t-storm is tagged as 'destructive'
-def severeTCheck(name, headline, messageType, tags):
-    if "DamageThreatDestructive" in tags:
+def severeTCheck(name, description, headline, messageType, tags):
+    if "DESTRUCTIVE" in tags or "destructive" in tags or "destructive storm" in description.lower():
         print("Destructive T-storm")
         alert = messages["Destructive Severe Thunderstorm Warning"].format(name, headline, messageType)
         return alert
@@ -266,7 +266,7 @@ def chooseAlert(type, name, headline, description, messageType, tags):
         embedDescription = discord.Embed(title=type, description=description)
         return alert, embedDescription
     elif type == "Severe Thunderstorm Warning":
-        severeTStorm = severeTCheck(name, headline, messageType, tags)
+        severeTStorm = severeTCheck(name, description, headline, messageType, tags)
         embedDescription = discord.Embed(title=type, description=description)
         return severeTStorm, embedDescription
     else:
