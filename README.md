@@ -23,3 +23,6 @@ USER=contact
 !changelog - shows most recent changes  
 !alerts - shows all active alerts.  
 !forcequit - automatically kills bot execution; if something goes wrong.  
+
+Geocoding data © OpenStreetMap contributors
+https://www.openstreetmap.org/copyright

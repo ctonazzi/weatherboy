@@ -1,5 +1,4 @@
-12/19/2025 v1.3.0
-- Added support for 'destructive' tag for the Severe Thunderstorm Warning. These are issued by the NWS for specific hazardous conditions which trigger WEA activation.
-- Moved locations and messages to separate files. This sets the groundwork for adding locations in the future.
-- ALL alerts now use embedded text boxes for the alert body. More info in a better, prettier layout.
-- Refactored some of the message code for better reusability.
+4/23/2026 v2.0.0
+- Converted commands to Discord slash commands. This should make them more interactive and easy to use.
+- Added commands to add, remove, and list tracked locations.
+- Very very very very very very minor improvements to code organization.

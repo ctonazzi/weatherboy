@@ -3,7 +3,9 @@ import discord
 import asyncio
 import aiohttp
 import json
+import re
 from dotenv import load_dotenv
+from discord import app_commands
 from discord.ext import commands
 from datetime import datetime, timezone
 
@@ -14,6 +16,7 @@ CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
 USER = os.getenv('USER') or ""
 MESSAGES_PATH = os.getenv('MESSAGES_PATH')
 LOCATIONS_PATH = os.getenv('LOCATIONS_PATH')
+GUILD_ID = os.getenv('GUILD_ID')
 print(f'USER AGENT: {USER}')
 botFirstStart = True
 poll_task = None # This is where the poll loop is held.
@@ -51,6 +54,14 @@ bot = commands.Bot(intents=intents, command_prefix='!')
 async def on_ready():
     global botFirstStart
     print(f'{bot.user} successfully connected.')
+    if GUILD_ID:
+        guild = discord.Object(id=int(GUILD_ID))
+        bot.tree.copy_global_to(guild=guild)
+        synced = await bot.tree.sync(guild=guild)
+        print(f'Synced {len(synced)} guild command(s).')
+    else:
+        synced = await bot.tree.sync() # sync commands
+        print(f'Synced {len(synced)} global command(s).')
 
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
@@ -64,28 +75,28 @@ async def on_ready():
 
 # COMMANDS
 
-@bot.command() # make sure bot is alive
-async def ping(ctx):
-    await ctx.send("pong")
+@bot.tree.command(name="ping", description="Reflect if bot is active.") # make sure bot is alive
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message("pong")
 
-@bot.command() # view bot info
-async def info(ctx):
+@bot.tree.command(name="info", description="View bot info.") # view bot info
+async def info(interaction: discord.Interaction):
     with open('info.txt', 'r') as file:
         info = file.read()
-    await ctx.send(info)
+    await interaction.response.send_message(info)
 
-@bot.command() # emergency quit remotely
-async def forcequit(ctx):
+@bot.tree.command(name="forcequit", description="Emergency quit remotely.") # emergency quit remotely
+async def forcequit(interaction: discord.Interaction):
     quit()
 
-@bot.command() # view changelog
-async def changelog(ctx):
+@bot.tree.command(name="changelog", description="View changelog.") # view changelog
+async def changelog(interaction: discord.Interaction):
     with open('changelog.txt', 'r') as file:
         info = file.read()
-    await ctx.send(info)
+    await interaction.response.send_message(info)
 
-@bot.command() # show all active alerts
-async def alerts(ctx):
+@bot.tree.command(name="alerts", description="Show all active alerts.") # show all active alerts
+async def alerts(interaction: discord.Interaction):
     try:
         alerts = ""
         for alert, tuple in cache.items():
@@ -97,9 +108,34 @@ async def alerts(ctx):
                 alerts += "\n"
         if alerts == "":
             alerts = "No active alerts"
-        await bot.get_channel(CHANNEL_ID).send(alerts)
+        await interaction.response.send_message(alerts)
     except Exception as e:
         print(f"Command exception: {e}")
+
+@bot.tree.command(name="add-location", description="Add a location to track.")
+@app_commands.describe(location="City you would like to track. (e.g. Dallas, TX or Miami, FL)")
+async def add_location(interaction: discord.Interaction, location: str):
+    locationrespond, normalized = await addLocation(location)
+    if locationrespond and normalized:
+        await interaction.response.send_message(f"Added {normalized}")
+    else:
+        await interaction.response.send_message("I couldn't add that location. Make sure it is in format City, ST and that it isn't already tracked.")
+
+@bot.tree.command(name="remove-location", description="Remove a location from tracking list.")
+@app_commands.describe(location="City you would like to remove. (e.g. Detroit, MI or Los Angeles, CA)")
+async def remove_location(interaction: discord.Interaction, location: str):
+    locationrespond, normalized = await removeLocation(location)
+    if locationrespond and normalized:
+        await interaction.response.send_message(f"Removed {normalized}")
+    else:
+        await interaction.response.send_message("Sorry boss, I couldn't remove that location. Make sure it is in format City, ST and exists.")
+
+@bot.tree.command(name="list-locations", description="List all currently tracked locations.")
+async def list_locations(interaction: discord.Interaction):
+    locationsString = listLocations()
+    if locationsString == "":
+        locationsString = "Yeah you need to add some locations before I can list them."
+    await interaction.response.send_message(embed=discord.Embed(title="Tracked Locations", description=locationsString))
 
 async def fetchAlerts(session, name, point): # Fetches the alerts from NWS API
     try:
@@ -219,6 +255,29 @@ async def update_activity():
     except Exception as e:
         print(f'Exception in update_activity: {e}')
 
+# Returns coordinates of given location or None if there is an error fetching location.
+async def fetch_location(location):
+    try:
+        api = f'https://nominatim.openstreetmap.org/search?q={location}&format=json'
+        headers = {
+            "User-Agent": f"weatherboy_test_bot_automated_alerts, {USER}"
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if not data:
+                        return None
+                    first = data[0]
+                    coords = f"{first['lat']},{first['lon']}"
+                    return coords
+                else:
+                    print(f'Error fetching location: {response.status}')
+                    return None
+    except aiohttp.ClientError as e:
+        print(f'Error fetching location: {e}')
+        return None
+
 # non-asyncronous functions
 # ------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -274,6 +333,62 @@ def chooseAlert(type, name, headline, description, messageType, tags):
         print(alert)
         embedDescription = discord.Embed(title=type, description=description)
         return alert, embedDescription
+
+# normalizes location names to "City, ST" format and checks that it is valid. Returns None if invalid, returns normalized name if valid.
+def normalize_location_name(location):
+    cleaned = re.sub(r"\s+", " ", location.strip())
+    match = re.fullmatch(r"([A-Za-z][A-Za-z .'-]*),\s*([A-Za-z]{2})", cleaned)
+    if not match:
+        return None
+    city = match.group(1).title()
+    state = match.group(2).upper()
+    return f"{city}, {state}"
+
+# add location to be tracked. returns True and the normalized name if successful, returns False and None otherwise.
+async def addLocation(location):
+    normalized = normalize_location_name(location)
+    if normalized is None:
+        return False, None
+
+    if normalized.lower() not in [key.lower() for key in locations.keys()]:
+        coords = await fetch_location(normalized)
+        if coords:
+            locations[normalized] = coords
+            with open(LOCATIONS_PATH, 'w', encoding='utf-8') as f:
+                json.dump(locations, f, indent=4)
+            print(f"Added location: {normalized} with coordinates {coords}")
+            return True, normalized
+        else:
+            print(f"Failed to fetch coordinates for location: {normalized}")
+            return False, None
+    return False, None
+
+# remove location from tracking. returns True and the normalized name if successful, returns False and None otherwise.
+async def removeLocation(location):
+    normalized = normalize_location_name(location)
+    if normalized is None:
+        return False, None
+
+    key_to_remove = None
+    for existing_key in locations:
+        if existing_key.lower() == normalized.lower():
+            key_to_remove = existing_key
+            break
+
+    if key_to_remove:
+        del locations[key_to_remove]
+        with open(LOCATIONS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(locations, f, indent=4)
+        print(f"Removed location: {key_to_remove}")
+        return True, key_to_remove
+    print(f"Location not found: {normalized}")
+    return False, None
+
+def listLocations():
+    string = f""
+    for location in locations:
+        string += f"{location}\n"
+    return string
 
 # keep at end
 bot.run(TOKEN)
